@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 pd.options.display.width = 0
 
 
-def run_bot(token, id_admin, add_handlers, add_jobs):
+def run_bot(token, id_logs, add_handlers, add_jobs):
     app = Application.builder().token(token).build()
     job = app.job_queue
 
@@ -23,4 +23,4 @@ def run_bot(token, id_admin, add_handlers, add_jobs):
     try:
         app.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as ex:
-        app.bot.sendMessage(id_admin, text=str(ex))
+        app.bot.sendMessage(id_logs, text=str(ex))

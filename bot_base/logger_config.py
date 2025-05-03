@@ -1,5 +1,7 @@
 import logging
 import re
+
+from telegram.error import NetworkError
 from telegram.ext import ContextTypes
 
 # Variables internas del módulo
@@ -91,7 +93,13 @@ async def check_logs(context: ContextTypes.DEFAULT_TYPE, file_name: str, context
             for text in diff:
                 for i in range(0, len(text), MAX_LENGTH):
                     fragment = text[i:i + MAX_LENGTH]
-                    await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
+                    try:
+                        if "INFO" not in fragment:
+                            await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
+                    except NetworkError as _:
+                        pass
+                    except Exception as e:
+                        logger.error(e)
 
     if result:
         context.bot_data[context_key] = result[-1]
