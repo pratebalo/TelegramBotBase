@@ -1,12 +1,10 @@
 import warnings
-import pandas as pd
 from telegram import Update
 from telegram.ext import Application
 from .logger_config import check_last_logs, check_log_errors
 from .error_handler import error_callback
 
 warnings.filterwarnings("ignore")
-pd.options.display.width = 0
 
 
 def run_bot(token, id_logs, add_handlers, add_jobs):
