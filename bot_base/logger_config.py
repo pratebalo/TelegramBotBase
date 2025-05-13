@@ -9,6 +9,7 @@ ID_LOGS = None
 PREFIX = ""
 MAX_LENGTH = 4095
 
+# Configuración del logger
 
 def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.log", error_log_file: str = "errors.log"):
     """
