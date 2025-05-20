@@ -20,12 +20,15 @@ def create_app(token):
     return Application.builder().token(token).build()
 
 
-def run_bot(app, id_logs, add_handlers, add_jobs):
+def run_bot(app, id_logs, add_handlers=None, add_jobs=None):
     job = app.job_queue
 
-    add_handlers(app)
+    if add_handlers:
+        add_handlers(app)
     app.add_error_handler(error_callback)
-    add_jobs(job)
+
+    if add_jobs:
+        add_jobs(job)
 
     job.run_repeating(check_last_logs, interval=60, first=1)
     job.run_repeating(check_log_errors, interval=60, first=1)
