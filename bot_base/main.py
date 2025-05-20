@@ -7,8 +7,20 @@ from .error_handler import error_callback
 warnings.filterwarnings("ignore")
 
 
-def run_bot(token, id_logs, add_handlers, add_jobs):
-    app = Application.builder().token(token).build()
+def create_app(token):
+    """
+    Crea una instancia de la aplicación de Telegram.
+
+    Args:
+        token (str): Token del bot de Telegram.
+
+    Returns:
+        Application: Instancia de la aplicación de Telegram.
+    """
+    return Application.builder().token(token).build()
+
+
+def run_bot(app, id_logs, add_handlers, add_jobs):
     job = app.job_queue
 
     add_handlers(app)
