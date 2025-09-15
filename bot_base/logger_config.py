@@ -6,24 +6,27 @@ from telegram.ext import ContextTypes
 
 # Variables internas del módulo
 ID_LOGS = None
+THREAD_ID = None
 PREFIX = ""
 MAX_LENGTH = 4095
 
 # Configuración del logger
 
-def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.log", error_log_file: str = "errors.log"):
+def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.log", error_log_file: str = "errors.log", thread_id: int = None):
     """
     Configura el sistema de logging reutilizable.
     Debe llamarse al iniciar cada bot.
 
     Args:
         id_logs (str): ID del chat donde se enviarán los logs por Telegram.
+        thread_id (int, optional): ID del hilo para mensajes en grupo. Defaults to None.
         prefix (str): Prefijo para los mensajes enviados por el bot.
         info_log_file (str): Archivo para logs INFO y WARNING.
         error_log_file (str): Archivo para logs ERROR.
     """
-    global ID_LOGS, PREFIX, logger, MAX_LENGTH
+    global ID_LOGS, THREAD_ID, PREFIX, logger, MAX_LENGTH
     ID_LOGS = id_logs
+    THREAD_ID = thread_id
     PREFIX = prefix
     MAX_LENGTH = 4095 - len(PREFIX)
 
@@ -96,7 +99,10 @@ async def check_logs(context: ContextTypes.DEFAULT_TYPE, file_name: str, context
                     fragment = text[i:i + MAX_LENGTH]
                     try:
                         if "INFO" not in fragment:
-                            await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
+                            if THREAD_ID:
+                                await context.bot.send_message(ID_LOGS,message_thread_id=THREAD_ID, text=f"{PREFIX}{fragment}")
+                            else:
+                                await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
                     except NetworkError as _:
                         pass
                     except Exception as e:
