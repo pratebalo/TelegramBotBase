@@ -10,6 +10,7 @@ THREAD_ID = None
 PREFIX = ""
 MAX_LENGTH = 4095
 
+
 # Configuración del logger
 
 def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.log", error_log_file: str = "errors.log", thread_id: int = None):
@@ -100,7 +101,7 @@ async def check_logs(context: ContextTypes.DEFAULT_TYPE, file_name: str, context
                     try:
                         if "INFO" not in fragment:
                             if THREAD_ID:
-                                await context.bot.send_message(ID_LOGS,message_thread_id=THREAD_ID, text=f"{PREFIX}{fragment}")
+                                await context.bot.send_message(ID_LOGS, message_thread_id=THREAD_ID, text=f"{PREFIX}{fragment}")
                             else:
                                 await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
                     except NetworkError as _:
