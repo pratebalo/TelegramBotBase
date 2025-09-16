@@ -1,5 +1,7 @@
 import warnings
-from telegram import Update
+from typing import List, Optional
+
+from telegram import Update, BotCommand
 from telegram.ext import Application
 from .logger_config import check_last_logs, check_log_errors
 from .error_handler import error_callback
@@ -7,17 +9,29 @@ from .error_handler import error_callback
 warnings.filterwarnings("ignore")
 
 
-def create_app(token):
+def make_post_init(commands: Optional[list[tuple[str, str]]] = None):
+    async def _post_init(app: Application):
+        if commands:
+            cmd_objs = [BotCommand(cmd, desc) for cmd, desc in commands]
+            await app.bot.set_my_commands(cmd_objs)
+        else:
+            print("No se configuraron comandos")
+
+    return _post_init
+
+
+def create_app(token, commands: List[str, str] = None):
     """
     Crea una instancia de la aplicación de Telegram.
 
     Args:
+        commands (List[str,str], optional): Lista de comandos para el bot. Defaults to None.
         token (str): Token del bot de Telegram.
 
     Returns:
         Application: Instancia de la aplicación de Telegram.
     """
-    return Application.builder().token(token).build()
+    return Application.builder().token(token).post_init(make_post_init(commands)).build()
 
 
 def run_bot(app, id_logs, add_handlers=None, add_jobs=None):
