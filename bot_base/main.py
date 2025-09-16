@@ -14,13 +14,10 @@ def make_post_init(commands: Optional[list[tuple[str, str]]] = None):
         if commands:
             cmd_objs = [BotCommand(cmd, desc) for cmd, desc in commands]
             await app.bot.set_my_commands(cmd_objs)
-        else:
-            print("No se configuraron comandos")
-
     return _post_init
 
 
-def create_app(token, commands: List[str, str] = None):
+def create_app(token, commands: Optional[list[tuple[str, str]]] = None):
     """
     Crea una instancia de la aplicación de Telegram.
 
