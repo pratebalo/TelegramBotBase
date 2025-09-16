@@ -1,5 +1,5 @@
 import warnings
-from typing import List, Optional
+from typing import Optional
 
 from telegram import Update, BotCommand
 from telegram.ext import Application
