@@ -50,15 +50,16 @@ def run_bot(app: Application, id_logs: str, add_handlers=None, add_jobs=None):
         app.bot.sendMessage(id_logs, text=str(ex))
 
 
-def main(id_logs: str, thread_id: Optional[int], name: str, token: str, commands: Optional[list[tuple[str, str]]] = None, add_handlers=None,
-         create_jobs=None) -> Application:
+def main(id_logs: str, thread_id: Optional[int], name: str, token: str,
+         commands: Optional[list[tuple[str, str]]] = None,
+         add_handlers=None,
+         add_jobs=None) -> Application:
     setup_logger(id_logs=id_logs, thread_id=thread_id, prefix=name)
     my_app = create_app(token, commands=commands)
-    if create_jobs:
-        create_jobs(my_app.job_queue)
     run_bot(
         app=my_app,
         id_logs=id_logs,
-        add_handlers=add_handlers
+        add_handlers=add_handlers,
+        add_jobs=add_jobs
     )
     return my_app
