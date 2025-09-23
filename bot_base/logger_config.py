@@ -28,7 +28,7 @@ def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.l
     global ID_LOGS, THREAD_ID, PREFIX, logger, MAX_LENGTH
     ID_LOGS = id_logs
     THREAD_ID = thread_id
-    PREFIX = prefix
+    PREFIX = f"{prefix} - "
     MAX_LENGTH = 4095 - len(PREFIX)
 
     # Configura el sistema de registro
