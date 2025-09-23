@@ -18,7 +18,7 @@ def make_post_init(commands: Optional[list[tuple[str, str]]] = None):
     return _post_init
 
 
-def create_app(token, commands: Optional[list[tuple[str, str]]] = None):
+def create_app(token: str, commands: Optional[list[tuple[str, str]]] = None):
     """
     Crea una instancia de la aplicación de Telegram.
 
@@ -32,7 +32,7 @@ def create_app(token, commands: Optional[list[tuple[str, str]]] = None):
     return Application.builder().token(token).post_init(make_post_init(commands)).build()
 
 
-def run_bot(app, id_logs, add_handlers=None, add_jobs=None):
+def run_bot(app: Application, id_logs: str, add_handlers=None, add_jobs=None):
     job = app.job_queue
 
     if add_handlers:
@@ -50,13 +50,13 @@ def run_bot(app, id_logs, add_handlers=None, add_jobs=None):
         app.bot.sendMessage(id_logs, text=str(ex))
 
 
-def main(id_logs: str, thread_id: Optional[int], name: str, token: str, commands: Optional[list[tuple[str, str]]] = None, add_handlers=None, create_jobs=None):
+def main(id_logs: str, thread_id: Optional[int], name: str, token: str, commands: Optional[list[tuple[str, str]]] = None, add_handlers=None,
+         create_jobs=None) -> Application:
     setup_logger(id_logs=id_logs, thread_id=thread_id, prefix=name)
     my_app = create_app(token, commands=commands)
-
-    create_jobs(my_app.job_queue)
     run_bot(
         app=my_app,
         id_logs=id_logs,
         add_handlers=add_handlers
     )
+    return my_app
