@@ -6,9 +6,9 @@ async def error_callback(_, context):
     try:
         raise context.error
     except BadRequest as e:
-        logger.warning(f"BadRequest -> {e}")
+        logger.warning(f"BadRequest -> {e} {traceback.format_exc()}")
     except NetworkError as e:
-        logger.warning(f"NetworkError -> {e}")
+        logger.warning(f"NetworkError -> {e} {traceback.format_exc()}")
     except Conflict as e:
         logger.error(f"Conflicto -> {e} {traceback.format_exc()}")
     except Exception as e:
