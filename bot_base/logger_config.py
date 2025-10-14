@@ -10,20 +10,15 @@ THREAD_ID = None
 PREFIX = ""
 MAX_LENGTH = 4095
 
-
 # Configuración del logger
 
-def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.log", error_log_file: str = "errors.log", thread_id: int = None):
-    """
-    Configura el sistema de logging reutilizable.
-    Debe llamarse al iniciar cada bot.
+logger = logging.getLogger("telegram_bot_logger")
 
-    Args:
-        id_logs (str): ID del chat donde se enviarán los logs por Telegram.
-        thread_id (int, optional): ID del hilo para mensajes en grupo. Defaults to None.
-        prefix (str): Prefijo para los mensajes enviados por el bot.
-        info_log_file (str): Archivo para logs INFO y WARNING.
-        error_log_file (str): Archivo para logs ERROR.
+
+def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.log",
+                 error_log_file: str = "errors.log", thread_id: int = None):
+    """
+    Configura el sistema de logging reutilizable. Solo se configura una vez por proceso.
     """
     global ID_LOGS, THREAD_ID, PREFIX, logger, MAX_LENGTH
     ID_LOGS = id_logs
@@ -31,18 +26,26 @@ def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.l
     PREFIX = f"{prefix} - "
     MAX_LENGTH = 4095 - len(PREFIX)
 
-    # Configura el sistema de registro
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+    # Logger con nombre propio (evita interferir con el root)
+    logger = logging.getLogger("telegram_bot_logger")
 
-    httpx_logger = logging.getLogger('httpx')
-    httpx_logger.setLevel(logging.WARNING)
-    logging.getLogger('apscheduler').propagate = False
+    # Evita configuración múltiple
+    if getattr(logger, "_custom_logger_initialized", False):
+        return
+    logger._custom_logger_initialized = True
 
-    # Manejadores
+    # Limpia handlers previos si el proceso no se reinició del todo
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # Nivel base
+    logger.setLevel(logging.INFO)
+
+    # Manejadores de archivo
     info_warning_handler = logging.FileHandler(info_log_file)
     error_handler = logging.FileHandler(error_log_file)
 
-    # Filtro personalizado para INFO y WARNING
+    # Filtro para separar info/warning
     class InfoWarningFilter(logging.Filter):
         def filter(self, record):
             return record.levelno <= logging.WARNING
@@ -51,14 +54,19 @@ def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.l
     info_warning_handler.setLevel(logging.INFO)
     error_handler.setLevel(logging.ERROR)
 
+    # Formato común
     formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
     info_warning_handler.setFormatter(formatter)
     error_handler.setFormatter(formatter)
 
-    # Logger principal
-    logger = logging.getLogger()
+    # Añadir handlers
     logger.addHandler(info_warning_handler)
     logger.addHandler(error_handler)
+
+    # Silenciar ruido externo
+    logging.getLogger('httpx').setLevel(logging.WARNING)
+    logging.getLogger('apscheduler').propagate = False
+    logging.getLogger('telegram').propagate = False
 
 
 def get_last_lines(file: str, num_lines: int = 200) -> str:
