@@ -3,7 +3,7 @@ from typing import Optional
 
 from telegram import Update, BotCommand
 from telegram.ext import Application
-from .logger_config import check_last_logs, check_log_errors, setup_logger
+from .logger_config import check_logs, setup_logger
 from .error_handler import error_callback
 
 warnings.filterwarnings("ignore")
@@ -13,7 +13,7 @@ def make_post_init(commands: Optional[list[tuple[str, str]]] = None):
     async def _post_init(app: Application):
         if commands:
             cmd_objs = [BotCommand(cmd, desc) for cmd, desc in commands]
-            await app.bot.set_my_commands(cmd_objs)
+            await app.bot.set_my_commands(cmd_objs)  # type: ignore[attr-defined]
 
     return _post_init
 
@@ -42,12 +42,11 @@ def run_bot(app: Application, id_logs: str, add_handlers=None, add_jobs=None):
     if add_jobs:
         add_jobs(job)
 
-    job.run_repeating(check_last_logs, interval=60, first=1)
-    job.run_repeating(check_log_errors, interval=60, first=1)
+    job.run_repeating(check_logs, interval=60, first=1)
     try:
         app.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as ex:
-        app.bot.sendMessage(id_logs, text=str(ex))
+        app.bot.sendMessage(id_logs, text=str(ex))  # type: ignore[attr-defined]
 
 
 def main(id_logs: str, thread_id: Optional[int], name: str, token: str,

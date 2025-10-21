@@ -2,7 +2,7 @@ import logging
 import re
 
 from telegram.error import NetworkError
-from telegram.ext import ContextTypes
+from telegram.ext import CallbackContext
 
 # Variables internas del módulo
 ID_LOGS = None
@@ -15,8 +15,7 @@ MAX_LENGTH = 4095
 logger = logging.getLogger("telegram_bot_logger")
 
 
-def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.log",
-                 error_log_file: str = "errors.log", thread_id: int = None):
+def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", thread_id: int = None):
     """
     Configura el sistema de logging reutilizable. Solo se configura una vez por proceso.
     """
@@ -42,26 +41,16 @@ def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.l
     logger.setLevel(logging.INFO)
 
     # Manejadores de archivo
-    info_warning_handler = logging.FileHandler(info_log_file)
-    error_handler = logging.FileHandler(error_log_file)
+    log_handler = logging.FileHandler(log_file, encoding="utf-8")
 
-    # Filtro para separar info/warning
-    class InfoWarningFilter(logging.Filter):
-        def filter(self, record):
-            return record.levelno <= logging.WARNING
-
-    info_warning_handler.addFilter(InfoWarningFilter())
-    info_warning_handler.setLevel(logging.INFO)
-    error_handler.setLevel(logging.ERROR)
+    log_handler.setLevel(logging.INFO)
 
     # Formato común
     formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
-    info_warning_handler.setFormatter(formatter)
-    error_handler.setFormatter(formatter)
+    log_handler.setFormatter(formatter)
 
     # Añadir handlers
-    logger.addHandler(info_warning_handler)
-    logger.addHandler(error_handler)
+    logger.addHandler(log_handler)
 
     # Silenciar ruido externo
     logging.getLogger('httpx').setLevel(logging.WARNING)
@@ -69,10 +58,10 @@ def setup_logger(id_logs: str, prefix: str, info_log_file: str = "info_warning.l
     logging.getLogger('telegram').propagate = False
 
 
-def get_last_lines(file: str, num_lines: int = 200) -> str:
+def get_last_lines(num_lines: int = 1000) -> str:
     buffer_size = 4095  # Puedes ajustar este valor si deseas
 
-    with open(file, 'rb') as f:
+    with open('my_logs.log', 'rb') as f:
         f.seek(0, 2)
         pos = f.tell()
         lines = []
@@ -86,38 +75,29 @@ def get_last_lines(file: str, num_lines: int = 200) -> str:
         return '\n'.join(lines[-num_lines:])
 
 
-async def check_log_errors(context: ContextTypes.DEFAULT_TYPE):
-    await check_logs(context, "errors.log", "last_error_log")
-
-
-async def check_last_logs(context: ContextTypes.DEFAULT_TYPE):
-    await check_logs(context, "info_warning.log", "last_log")
-
-
-async def check_logs(context: ContextTypes.DEFAULT_TYPE, file_name: str, context_key: str):
-    logs = get_last_lines(file_name)
+async def check_logs(context: CallbackContext):
+    logs = get_last_lines()
     result = re.split(r'(?=^\d{4}-\d{2}-\d{2} )', logs, flags=re.MULTILINE)
     result = [element.strip() for element in result if element]
-    if context_key in context.bot_data:
-        if context.bot_data[context_key] in result:
-            diff = result[result.index(context.bot_data[context_key]) + 1:]
-            for text in diff:
-                for i in range(0, len(text), MAX_LENGTH):
-                    fragment = text[i:i + MAX_LENGTH]
-                    try:
-                        if "INFO" not in fragment:
-                            if THREAD_ID:
-                                await context.bot.send_message(ID_LOGS, message_thread_id=THREAD_ID, text=f"{PREFIX}{fragment}")
-                            else:
-                                await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
-                    except NetworkError as _:
-                        pass
-                    except Exception as e:
-                        logger.error(e)
-
+    last_send_log = context.bot_data.get("last_log", None)
     if result:
-        context.bot_data[context_key] = result[-1]
+        context.bot_data["last_log"] = result[-1]
 
+    if last_send_log not in result:
+        return
 
-# Exponemos el logger configurado
-logger = logging.getLogger()
+    diff = result[result.index(last_send_log) + 1:]
+    for text in diff:
+        for i in range(0, len(text), MAX_LENGTH):
+            fragment = text[i:i + MAX_LENGTH]
+            if "INFO" in fragment:
+                continue
+            try:
+                if THREAD_ID:
+                    await context.bot.send_message(ID_LOGS, message_thread_id=THREAD_ID, text=f"{fragment}")
+                else:
+                    await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
+            except NetworkError as _:
+                pass
+            except Exception as e:
+                logger.error(e)
