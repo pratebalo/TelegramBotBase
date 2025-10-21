@@ -96,9 +96,7 @@ async def check_last_logs(context: ContextTypes.DEFAULT_TYPE):
 
 async def check_logs(context: ContextTypes.DEFAULT_TYPE, file_name: str, context_key: str):
     logs = get_last_lines(file_name)
-
-    regex = r'^\d{4}-\d{2}-\d{2} '
-    result = re.split(regex, logs, flags=re.MULTILINE)
+    result = re.split(r'(?=^\d{4}-\d{2}-\d{2} )', logs, flags=re.MULTILINE)
     result = [element.strip() for element in result if element]
     if context_key in context.bot_data:
         if context.bot_data[context_key] in result:
