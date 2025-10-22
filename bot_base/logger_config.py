@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import List
 
 from telegram.error import NetworkError
 from telegram.ext import CallbackContext
@@ -60,7 +61,7 @@ def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", threa
     logging.getLogger('apscheduler').propagate = False
 
 
-def get_last_lines(num_lines: int = 1000) -> str:
+def get_last_lines(num_lines: int = 1000) -> List[str]:
     buffer_size = 4095  # Puedes ajustar este valor si deseas
 
     with open('my_logs.log', 'rb') as f:
@@ -73,22 +74,27 @@ def get_last_lines(num_lines: int = 1000) -> str:
             f.seek(pos)
             chunk = f.read(to_read)
             lines[:0] = chunk.decode('utf-8', errors='replace').splitlines()
-
-        return '\n'.join(lines[-num_lines:])
+    logs = '\n'.join(lines[-num_lines:])
+    result = re.split(r'(?=^\d{4}-\d{2}-\d{2} )', logs, flags=re.MULTILINE)
+    result = [element.strip() for element in result if element]
+    return result
 
 
 async def check_logs(context: CallbackContext):
     logs = get_last_lines()
-    result = re.split(r'(?=^\d{4}-\d{2}-\d{2} )', logs, flags=re.MULTILINE)
-    result = [element.strip() for element in result if element]
-    last_send_log = context.bot_data.get("last_log", None)
-    if result:
-        context.bot_data["last_log"] = result[-1]
 
-    if last_send_log not in result:
+    last_send_log = context.bot_data.get("last_log", None)
+
+    context.bot_data["last_log"] = logs[-1]
+
+    if last_send_log and last_send_log not in logs:
+        logger.error(f"Algo ha ido regular -> {last_send_log}\n{logs}")
         return
 
-    diff = result[result.index(last_send_log) + 1:]
+    if not last_send_log:
+        diff = [logs[-1]]
+    else:
+        diff = logs[logs.index(last_send_log) + 1:]
     for text in diff:
         for i in range(0, len(text), MAX_LENGTH):
             fragment = text[i:i + MAX_LENGTH]
