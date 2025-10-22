@@ -37,6 +37,9 @@ def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", threa
     if logger.hasHandlers():
         logger.handlers.clear()
 
+    # Configura el sistema de registro
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+
     # Nivel base
     logger.setLevel(logging.INFO)
 
@@ -45,22 +48,16 @@ def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", threa
 
     log_handler.setLevel(logging.INFO)
 
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
     # Formato común
     formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
     log_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
 
     # Añadir handlers
     logger.addHandler(log_handler)
-    logger.addHandler(console_handler)
 
     # Silenciar ruido externo
     logging.getLogger('httpx').setLevel(logging.WARNING)
     logging.getLogger('apscheduler').propagate = False
-    logging.getLogger('telegram').propagate = False
 
 
 def get_last_lines(num_lines: int = 1000) -> str:
