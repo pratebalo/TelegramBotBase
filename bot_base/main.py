@@ -3,7 +3,7 @@ from typing import Optional
 
 from telegram import Update, BotCommand
 from telegram.ext import Application
-from .logger_config import check_logs, setup_logger
+from .logger_config import check_logs, setup_logger, logger
 from .error_handler import error_callback
 
 warnings.filterwarnings("ignore")
@@ -46,7 +46,7 @@ def run_bot(app: Application, id_logs: str, add_handlers=None, add_jobs=None):
     try:
         app.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as ex:
-        app.bot.sendMessage(id_logs, text=str(ex))  # type: ignore[attr-defined]
+        logger.error(ex)
 
 
 def main(id_logs: str, thread_id: Optional[int], name: str, token: str,
