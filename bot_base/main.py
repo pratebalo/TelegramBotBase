@@ -43,6 +43,7 @@ def run_bot(app: Application, id_logs: str, add_handlers=None, add_jobs=None):
         add_jobs(job)
 
     job.run_repeating(check_logs, interval=60, first=1)
+    logger.warning("Application started")
     try:
         app.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as ex:
