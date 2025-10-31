@@ -6,7 +6,7 @@ from telegram.error import NetworkError
 from telegram.ext import CallbackContext
 
 # Variables internas del módulo
-ID_LOGS = None
+ID_LOGS = ""
 THREAD_ID = None
 PREFIX = ""
 MAX_LENGTH = 4095
@@ -34,7 +34,7 @@ def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", threa
         return
     logger._custom_logger_initialized = True
 
-    # Limpia handlers previos si el proceso no se reinició del todo
+    # Limpia handlers previos si el proceso no se reinició completamente
     if logger.hasHandlers():
         logger.handlers.clear()
 
@@ -88,7 +88,8 @@ async def check_logs(context: CallbackContext):
     context.bot_data["last_log"] = logs[-1]
 
     if last_send_log and last_send_log not in logs:
-        logger.error(f"Algo ha ido regular -> {last_send_log}\n{logs}")
+        await context.bot.send_message(ID_LOGS, text=f"{PREFIX}-- Algo ha ido regular, se han perdido logs --}}\n{last_send_log}")
+        logger.error(f"Algo ha ido regular, se han perdido logs -> {last_send_log}\n{logs}")
         return
 
     if not last_send_log:
