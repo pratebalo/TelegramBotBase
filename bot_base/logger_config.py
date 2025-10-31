@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from typing import List
 
 from telegram.error import NetworkError
@@ -58,7 +59,7 @@ def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", threa
 
     # Silenciar ruido externo
     logging.getLogger('httpx').setLevel(logging.WARNING)
-    logging.getLogger('apscheduler').propagate = False
+    logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
 
 def get_last_lines(num_lines: int = 1000) -> List[str]:

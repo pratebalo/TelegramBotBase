@@ -2,6 +2,7 @@ import traceback
 from telegram.error import BadRequest, Conflict, NetworkError
 from .logger_config import logger
 
+
 async def error_callback(_, context):
     try:
         raise context.error
