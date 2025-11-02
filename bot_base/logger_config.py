@@ -90,7 +90,7 @@ async def check_logs(context: CallbackContext):
 
     if last_send_log and last_send_log not in logs:
         await context.bot.send_message(ID_LOGS, text=f"{PREFIX}-- Algo ha ido regular, se han perdido logs --}}\n{last_send_log}")
-        logger.error(f"Algo ha ido regular, se han perdido logs -> {last_send_log}\n{logs}")
+        logger.error(f"Algo ha ido regular, se han perdido logs -> {last_send_log}\n{logs[:-10]}")
         return
 
     if not last_send_log:
