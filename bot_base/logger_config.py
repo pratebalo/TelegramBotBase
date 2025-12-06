@@ -1,23 +1,21 @@
 import logging
+import os
 import re
-import time
-from typing import List
-
-from telegram.error import NetworkError
 from telegram.ext import CallbackContext
 
 # Variables internas del módulo
 ID_LOGS = ""
 THREAD_ID = None
 PREFIX = ""
-MAX_LENGTH = 4095
+MAX_LENGTH = 4000
+FILE_LOGS = "my_logs.log"
 
 # Configuración del logger
 
 logger = logging.getLogger("telegram_bot_logger")
 
 
-def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", thread_id: int = None):
+def setup_logger(id_logs: str, prefix: str, thread_id: int = None):
     """
     Configura el sistema de logging reutilizable. Solo se configura una vez por proceso.
     """
@@ -46,7 +44,7 @@ def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", threa
     logger.setLevel(logging.INFO)
 
     # Manejadores de archivo
-    log_handler = logging.FileHandler(log_file, encoding="utf-8")
+    log_handler = logging.FileHandler(FILE_LOGS, encoding="utf-8")
 
     log_handler.setLevel(logging.INFO)
 
@@ -62,52 +60,62 @@ def setup_logger(id_logs: str, prefix: str, log_file: str = "my_logs.log", threa
     logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
 
-def get_last_lines(num_lines: int = 1000) -> List[str]:
-    buffer_size = 4095  # Puedes ajustar este valor si deseas
-
-    with open('my_logs.log', 'rb') as f:
-        f.seek(0, 2)
-        pos = f.tell()
-        lines = []
-        while pos > 0 and len(lines) < num_lines:
-            to_read = min(pos, buffer_size)
-            pos -= to_read
-            f.seek(pos)
-            chunk = f.read(to_read)
-            lines[:0] = chunk.decode('utf-8', errors='replace').splitlines()
-    logs = '\n'.join(lines[-num_lines:])
-    result = re.split(r'(?=^\d{4}-\d{2}-\d{2} )', logs, flags=re.MULTILINE)
-    result = [element.strip() for element in result if element]
-    return result
+async def get_unread_lines(last_pos: int) -> tuple[str, int]:
+    """Lee nuevas líneas desde `last_pos` en `file_path` y devuelve el contenido y la nueva posición."""
+    with open(FILE_LOGS, 'r', encoding='utf-8') as f:
+        f.seek(last_pos)
+        new_content = f.read()
+        new_pos = f.tell()
+    return new_content, new_pos
 
 
 async def check_logs(context: CallbackContext):
-    logs = get_last_lines()
+    """
+    Monitoriza un fichero de log en busca de 'WARN' o 'ERROR' y envía una notificación.
+    Diseñado para ser llamado como un job repetitivo de telegram.ext.JobQueue.
+    """
+    try:
+        last_pos = context.bot_data.get("last_log", None)
+        if last_pos is None:
+            with open(FILE_LOGS, 'r', encoding='utf-8') as f:
+                f.seek(0, os.SEEK_END)
+                context.bot_data["last_log"] = f.tell()
+            return
+        new_content, last_pos = await get_unread_lines(context.bot_data["last_log"])
+        context.bot_data["last_log"] = last_pos
 
-    last_send_log = context.bot_data.get("last_log", None)
+        if not new_content:
+            return
 
-    context.bot_data["last_log"] = logs[-1]
+        # Dividir el contenido nuevo en entradas de log individuales
+        # El patrón busca una fecha al inicio de una línea para marcar el comienzo de un nuevo log
+        log_entries = re.findall(r'^\d{4}-\d{2}-\d{2} .*?(?=^\d{4}-\d{2}-\d{2} |\Z)', new_content, flags=re.MULTILINE | re.DOTALL)
 
-    if last_send_log and last_send_log not in logs:
-        await context.bot.send_message(ID_LOGS, text=f"{PREFIX}-- Algo ha ido regular, se han perdido logs --}}\n{last_send_log}")
-        logger.error(f"Algo ha ido regular, se han perdido logs -> {last_send_log}\n{logs[:-10]}")
+        # Procesa nuevas entradas de log
+        for entry in log_entries:
+            if not entry or ("WARN" not in entry and "ERROR" not in entry):
+                continue
+
+            clean_entry = entry.strip()
+            try:
+                await _send_long_message(context, clean_entry)
+            except Exception as e:
+                logging.error(f"No se pudo enviar el mensaje del bot sobre defaulterapp.log: {e}")
+
+    except FileNotFoundError:
+        logging.warning("El fichero de log ha desaparecido (probablemente durante la rotación). Reintentando en la próxima ejecución...")
+    except Exception as e:
+        logging.error(f"Ocurrió un error inesperado en monitorizar_log_defaulter: {e}")
+
+
+async def _send_long_message(context: CallbackContext, text: str):
+    """Envía `text` dividido en varios mensajes si supera el límite de Telegram."""
+    if not text:
         return
 
-    if not last_send_log:
-        diff = [logs[-1]]
-    else:
-        diff = logs[logs.index(last_send_log) + 1:]
-    for text in diff:
-        for i in range(0, len(text), MAX_LENGTH):
-            fragment = text[i:i + MAX_LENGTH]
-            if "INFO" in fragment:
-                continue
-            try:
-                if THREAD_ID:
-                    await context.bot.send_message(ID_LOGS, message_thread_id=THREAD_ID, text=f"{fragment}")
-                else:
-                    await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{fragment}")
-            except NetworkError as _:
-                pass
-            except Exception as e:
-                logger.error(e)
+    # Aseguramos que no haya espacios enormes al principio/fin
+    text = text.strip()
+
+    for i in range(0, len(text), MAX_LENGTH):
+        chunk = text[i:i + MAX_LENGTH]
+        await context.bot.send_message(chat_id=ID_LOGS, text=chunk)
