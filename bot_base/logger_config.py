@@ -118,4 +118,7 @@ async def _send_long_message(context: CallbackContext, text: str):
 
     for i in range(0, len(text), MAX_LENGTH):
         chunk = text[i:i + MAX_LENGTH]
-        await context.bot.send_message(chat_id=ID_LOGS, text=chunk)
+        if THREAD_ID:
+            await context.bot.send_message(ID_LOGS, message_thread_id=THREAD_ID, text=f"{chunk}")
+        else:
+            await context.bot.send_message(ID_LOGS, text=f"{PREFIX}{chunk}")
