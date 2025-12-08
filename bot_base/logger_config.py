@@ -10,8 +10,8 @@ PREFIX = ""
 MAX_LENGTH = 4000
 FILE_LOGS = "my_logs.log"
 LAST_LOG = 0
-# Configuración del logger
 
+# Configuración del logger
 logger = logging.getLogger("telegram_bot_logger")
 
 
