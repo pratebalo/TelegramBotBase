@@ -9,7 +9,7 @@ THREAD_ID = None
 PREFIX = ""
 MAX_LENGTH = 4000
 FILE_LOGS = "my_logs.log"
-
+LAST_LOG = 0
 # Configuración del logger
 
 logger = logging.getLogger("telegram_bot_logger")
@@ -19,7 +19,7 @@ def setup_logger(id_logs: str, prefix: str, thread_id: int = None):
     """
     Configura el sistema de logging reutilizable. Solo se configura una vez por proceso.
     """
-    global ID_LOGS, THREAD_ID, PREFIX, logger, MAX_LENGTH
+    global ID_LOGS, THREAD_ID, PREFIX, logger, MAX_LENGTH, LAST_LOG
     ID_LOGS = id_logs
     THREAD_ID = thread_id
     PREFIX = f"{prefix} - "
@@ -59,6 +59,11 @@ def setup_logger(id_logs: str, prefix: str, thread_id: int = None):
     logging.getLogger('httpx').setLevel(logging.WARNING)
     logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
+    with open(FILE_LOGS, 'r', encoding='utf-8') as f:
+        f.seek(0, os.SEEK_END)
+        LAST_LOG = f.tell()
+    return
+
 
 async def get_unread_lines(last_pos: int) -> tuple[str, int]:
     """Lee nuevas líneas desde `last_pos` en `file_path` y devuelve el contenido y la nueva posición."""
@@ -74,15 +79,10 @@ async def check_logs(context: CallbackContext):
     Monitoriza un fichero de log en busca de 'WARN' o 'ERROR' y envía una notificación.
     Diseñado para ser llamado como un job repetitivo de telegram.ext.JobQueue.
     """
+    global LAST_LOG
     try:
-        last_pos = context.bot_data.get("last_log", None)
-        if last_pos is None:
-            with open(FILE_LOGS, 'r', encoding='utf-8') as f:
-                f.seek(0, os.SEEK_END)
-                context.bot_data["last_log"] = f.tell()
-            return
-        new_content, last_pos = await get_unread_lines(context.bot_data["last_log"])
-        context.bot_data["last_log"] = last_pos
+        new_content, last_pos = await get_unread_lines(LAST_LOG)
+        LAST_LOG = last_pos
 
         if not new_content:
             return
